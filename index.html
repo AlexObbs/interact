@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Example Map by Alexs</title>
+    <style>
+        #map-container {
+            width: 100%;
+            height: 500px;
+        }
+
+        @media (max-width: 768px) {
+            #map-container {
+                height: 300px;
+            }
+        }
+
+        .tooltip {
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ccc;
+            padding: 10px;
+            display: none;
+            pointer-events: none;
+        }
+    </style>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.12.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.12.0/mapbox-gl.css' rel='stylesheet' />
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            mapboxgl.accessToken = 'pk.eyJ1Ijoib2JieWJsYXEiLCJhIjoiY2x4ZDhxMndpMDJwajJqcjJzZ20xMGtkbCJ9.yrT1QEhudAT8wzkET9lQ9w';
+
+            var map = new mapboxgl.Map({
+                container: 'map-container',
+                style: 'mapbox://styles/mapbox/streets-v11',
+                center: [10.4515, 51.1657], // Center of Germany
+                zoom: 6
+            });
+
+            var material1Data = [
+                { lng: 10.0, lat: 51.0, price: 100 },
+                { lng: 11.0, lat: 52.0, price: 150 }
+                // Add more data points here
+            ];
+            var material2Data = [
+                { lng: 10.5, lat: 51.5, price: 200 },
+                { lng: 11.5, lat: 52.5, price: 250 }
+                // Add more data points here
+            ];
+
+            function createHeatmapLayer(id, data, color) {
+                map.addLayer({
+                    id: id,
+                    type: 'heatmap',
+                    source: {
+                        type: 'geojson',
+                        data: {
+                            type: 'FeatureCollection',
+                            features: data.map(function (point) {
+                                return {
+                                    type: 'Feature',
+                                    geometry: {
+                                        type: 'Point',
+                                        coordinates: [point.lng, point.lat]
+                                    },
+                                    properties: {
+                                        price: point.price
+                                    }
+                                };
+                            })
+                        }
+                    },
+                    paint: {
+                        'heatmap-weight': [
+                            'interpolate',
+                            ['linear'],
+                            ['get', 'price'],
+                            0, 0,
+                            1, 1
+                        ],
+                        'heatmap-intensity': [
+                            'interpolate',
+                            ['linear'],
+                            ['zoom'],
+                            0, 1,
+                            9, 3
+                        ],
+                        'heatmap-color': [
+                            'interpolate',
+                            ['linear'],
+                            ['heatmap-density'],
+                            0, 'rgba(33,102,172,0)',
+                            0.2, color,
+                            1, 'rgba(255,0,0,1)'
+                        ],
+                        'heatmap-radius': [
+                            'interpolate',
+                            ['linear'],
+                            ['zoom'],
+                            0, 2,
+                            9, 20
+                        ],
+                        'heatmap-opacity': [
+                            'interpolate',
+                            ['linear'],
+                            ['zoom'],
+                            7, 1,
+                            9, 0
+                        ]
+                    }
+                });
+            }
+
+            map.on('load', function () {
+                createHeatmapLayer('material1', material1Data, 'rgba(33, 102, 172, 0.6)');
+                createHeatmapLayer('material2', material2Data, 'rgba(103, 169, 207, 0.6)');
+            });
+
+            map.on('mousemove', function (e) {
+                var features = map.queryRenderedFeatures(e.point, {
+                    layers: ['material1', 'material2']
+                });
+
+                if (features.length) {
+                    var tooltip = document.querySelector('.tooltip');
+                    var feature = features[0];
+                    var coordinates = feature.geometry.coordinates.slice();
+                    var price = feature.properties.price;
+
+                    while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+                        coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+                    }
+
+                    tooltip.style.left = e.point.x + 'px';
+                    tooltip.style.top = e.point.y + 'px';
+                    tooltip.innerHTML = 'Price: ' + price;
+                    tooltip.style.display = 'block';
+                } else {
+                    document.querySelector('.tooltip').style.display = 'none';
+                }
+            });
+
+            document.getElementById('map-container').addEventListener('mouseleave', function () {
+                document.querySelector('.tooltip').style.display = 'none';
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <div id="map-container"></div>
+    <div class="tooltip"></div>
+</body>
+
+</html>
